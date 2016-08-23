@@ -93,7 +93,11 @@ class vk_api(object):
 			time.sleep(self.__sleep_sec)
 
 		request = vk_api.__get_request(request_string)
-		request_content = request.json()["response"]
+		request_json = request.json()
+		if "response" in request_json:
+			request_content = request_json["response"]
+		else:
+			request_content = {}
 		return request_content
 
 	def get(self, method, **kwargs):
@@ -128,6 +132,9 @@ class vk_api(object):
 
 		offset = 0
 		json_response = self.get(*args, **kwargs, offset=offset, count=start_count)
+
+		if k_count_s not in json_response:
+			return ndict(json=json_response, items=[])
 
 		total_count = json_response[k_count_s]
 		count = min(total_count, max_count) if has_limit else total_count
