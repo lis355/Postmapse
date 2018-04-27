@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import hashlib
 import json
 import os
@@ -8,6 +11,7 @@ import requests
 
 
 class vk_api(object):
+	__k_version = 5.74
 	__k_count = 100
 
 	@staticmethod
@@ -33,7 +37,7 @@ class vk_api(object):
 
 		file_name = s + ".json"
 		with open(self.__k_hash_path + file_name, "w") as file:
-			file.write(json.dumps(request, sort_keys=True, indent=4, separators=(',', ': ')))
+			file.write(json.dumps(request, sort_keys=True, indent=4, separators=(",", ": ")))
 
 	def clear_hash(self):
 		for file_path_dir in os.listdir(self.__k_hash_path):
@@ -46,10 +50,11 @@ class vk_api(object):
 
 	def __init__(self):
 		self.__token = ""
-		self.__version = 5.44
-		self.__sleep_sec = 0.2
+		self.__token_path = "vk.token"
+		self.__credentials_path = "credentials.json"
+		self.__sleep_sec = 0.25
 		self.__first_get = False
-		self.__k_hash_path = os.getcwd() + "\\vk_hash\\"
+		self.__k_hash_path = os.getcwd() + "\\vk_debug_hash\\"
 		self.__hash = {}
 
 		self.debug = True
@@ -60,50 +65,70 @@ class vk_api(object):
 		return requests.get(request_str)
 
 	@staticmethod
-	def __create_request_string(method, params):
+	def __create_request_string(method, params) -> str:
 		params_string = "".join(["&{0}={1}".format(key, value) for key, value in sorted(params.items())])
 		return method + params_string
 
 	@property
-	def token(self):
+	def token(self) -> str:
 		if not self.__token:
-			if os.path.isfile("token.txt"):
-				with open("token.txt", "r", encoding="utf-8") as token_file:
+			if os.path.isfile(self.__token_path):
+				with open(self.__token_path, "r", encoding="utf-8") as token_file:
 					self.__token = token_file.read()
-			else:
-				with open("credentials.json", "r", encoding="utf-8") as credentials_file:
-					credentials = json.loads(credentials_file.read())
-
-					credentials["v"] = self.__version
-					request_string = vk_api.__create_request_string("https://oauth.vk.com/token?grant_type=password", credentials)
-
-					request = vk_api.__get_request(request_string)
-					request_content = request.json()
-					self.__token = request_content["access_token"]
-
-					with open("token.txt", "w", encoding="utf-8") as token_file:
-						token_file.write(self.__token)
-
 		return self.__token
 
+	@staticmethod
+	def request_token(credentials) -> str:
+		credentials["v"] = vk_api.__k_version
+		request_string = vk_api.__create_request_string("https://oauth.vk.com/token?grant_type=password", credentials)
+
+		request = vk_api.__get_request(request_string)
+		request_content = request.json()
+		token = request_content["access_token"]
+		return token
+
+	def __clear_token(self):
+		if os.path.isfile(self.__token_path):
+			os.remove(self.__token_path)
+		self.__token = ""
+
 	def __get_string_request(self, request_string):
+		k_response_s = "response"
+
 		if not self.__first_get:
 			self.__first_get = True
 		else:
 			time.sleep(self.__sleep_sec)
 
-		request = vk_api.__get_request(request_string)
-		request_json = request.json()
-		if "response" in request_json:
-			request_content = request_json["response"]
-		else:
-			request_content = {}
+		request_content = {}
+		no_content = False
+
+		try:
+			request = vk_api.__get_request(request_string)
+			request_json = request.json()
+			if "error" in request_json:
+				request_json_error = request_json["error"]
+				if request_json_error:
+					error_number = request_json_error["error_code"]
+					if error_number == 5:
+						self.__clear_token()
+			else:
+				if k_response_s in request_json:
+					request_content = request_json[k_response_s]
+				else:
+					no_content = True
+		except:
+			no_content = True
+
+		if no_content:
+			pass
+
 		return request_content
 
 	def get(self, method, **kwargs):
 		rargs = dict(kwargs)
-		rargs["v"] = self.__version
-		request_string = vk_api.__create_request_string("https://api.vkontakte.ru/method/{0}?access_token={1}".format(method, self.token), rargs)
+		rargs["v"] = vk_api.__k_version
+		request_string = vk_api.__create_request_string("https://api.vk.com/method/{0}?access_token={1}".format(method, self.token), rargs)
 
 		if self.debug:
 			key = vk_api.md5(request_string)
@@ -145,9 +170,18 @@ class vk_api(object):
 		while offset < count:
 			next_count = min(vk_api.__k_count, count - offset)
 			next_json = self.get(*args, **kwargs, offset=offset, count=next_count)
+			# print("{0}".format(offset / count))
+
+			if k_items_s not in next_json:
+				break
+
 			next_result = next_json[k_items_s]
-			offset += len(next_result)
+			next_result_length = len(next_result)
+			offset += next_result_length
 			result.extend(next_result)
+
+			if next_result_length == 0:
+				break
 
 		return ndict(json=json_response, items=result)
 
