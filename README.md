@@ -1,4 +1,4 @@
-# Postmapse-Python
+# Postmapse
 Vk Help Query Library Python
 
 You must have a token-file in your execution directory.
