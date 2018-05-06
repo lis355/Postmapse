@@ -12,6 +12,20 @@ import requests
 class vk_api(object):
 	__k_version = 5.74
 	__k_count = 100
+	__k__token_path = "vk.token"
+	__k__sleep_sec = 0.25
+
+	__k_server_success_responce_status = 200
+	__k_server_errors = \
+		{
+			0: "UNKNOWN",
+			400: "BAD_REQUEST",
+			401: "UNAUTHORIZED",
+			403: "FORBIDDEN",
+			404: "NOT_FOUND",
+			420: "FLOOD",
+			500: "INTERNAL"
+		}
 
 	@staticmethod
 	def md5(s):
@@ -47,9 +61,6 @@ class vk_api(object):
 
 	def __init__(self):
 		self.__token = ""
-		self.__token_path = "vk.token"
-		self.__credentials_path = "credentials.json"
-		self.__sleep_sec = 0.25
 		self.__first_get = False
 		self.__k_hash_dir = os.getcwd() + "/vk_debug_hash/"
 		self.__hash = {}
@@ -63,14 +74,14 @@ class vk_api(object):
 
 	@staticmethod
 	def __create_request_string(method, params) -> str:
-		params_string = "".join(["&{0}={1}".format(param_key, params[param_key]) for param_key in params])
+		params_string = "".join(["&{0}={1}".format(param_key, params[param_key]) for param_key in sorted(params)])
 		return method + params_string
 
 	@property
 	def token(self) -> str:
 		if not self.__token:
-			if os.path.isfile(self.__token_path):
-				with open(self.__token_path, "r", encoding="utf-8") as token_file:
+			if os.path.isfile(vk_api.__k__token_path):
+				with open(vk_api.__k__token_path, "r", encoding="utf-8") as token_file:
 					self.__token = token_file.read()
 		return self.__token
 
@@ -85,43 +96,33 @@ class vk_api(object):
 		token = request_content["access_token"]
 		return token
 
+	@staticmethod
 	def __clear_token(self):
-		if os.path.isfile(self.__token_path):
-			os.remove(self.__token_path)
+		if os.path.isfile(vk_api.__k__token_path):
+			os.remove(vk_api.__k__token_path)
 		self.__token = ""
 
 	def __get_string_request(self, request_string):
-		k_response_s = "response"
-
 		if not self.__first_get:
 			self.__first_get = True
 		else:
-			time.sleep(self.__sleep_sec)
+			time.sleep(vk_api.__k__sleep_sec)
 
-		request_content = {}
-		no_content = False
+		request = vk_api.__get_request(request_string)
+		if request.status_code != vk_api.__k_server_success_responce_status:
+			status_code = request.status_code
+			if status_code not in vk_api.__k_server_errors:
+				status_code = 0
 
-		try:
-			request = vk_api.__get_request(request_string)
-			request_json = request.json()
-			if "error" in request_json:
-				request_json_error = request_json["error"]
-				if request_json_error:
-					error_number = request_json_error["error_code"]
-					if error_number == 5:
-						self.__clear_token()
-			else:
-				if k_response_s in request_json:
-					request_content = request_json[k_response_s]
-				else:
-					no_content = True
-		except:
-			no_content = True
+			raise Exception("Server error {0} {1}".format(status_code, vk_api.__k_server_errors[status_code]))
 
-		if no_content:
-			pass
-
-		return request_content
+		request_json = request.json()
+		if "error" in request_json:
+			request_json_error = request_json["error"]
+			if request_json_error:
+				raise Exception("Bad request: error {0}. {1}".format(request_json_error["error_code"], request_json_error["error_msg"]))
+		else:
+			return request_json["response"]
 
 	def get(self, method, **kwargs):
 		rargs = dict(kwargs)
@@ -183,7 +184,3 @@ class vk_api(object):
 				break
 
 		return ndict(json=json_response, items=result)
-
-	def get_own_id(self) -> int:
-		info = self.get("users.get")[0]
-		return info["id"]
