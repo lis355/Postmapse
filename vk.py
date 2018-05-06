@@ -6,7 +6,6 @@ from jsonf_python import jsonf
 import os
 import time
 from argparse import Namespace as ndict
-
 import requests
 
 
@@ -64,7 +63,7 @@ class vk_api(object):
 
 	@staticmethod
 	def __create_request_string(method, params) -> str:
-		params_string = "".join(["&{0}={1}".format(key, value) for key, value in sorted(params.items())])
+		params_string = "".join(["&{0}={1}".format(param_key, params[param_key]) for param_key in params])
 		return method + params_string
 
 	@property
@@ -76,9 +75,10 @@ class vk_api(object):
 		return self.__token
 
 	@staticmethod
-	def request_token(credentials) -> str:
-		credentials["v"] = vk_api.__k_version
-		request_string = vk_api.__create_request_string("https://oauth.vk.com/token?grant_type=password", credentials)
+	def request_token(params) -> str:
+		params["grant_type"] = "password"
+		params["v"] = vk_api.__k_version
+		request_string = vk_api.__create_request_string("https://oauth.vk.com/token?", params)
 
 		request = vk_api.__get_request(request_string)
 		request_content = request.json()
@@ -125,8 +125,9 @@ class vk_api(object):
 
 	def get(self, method, **kwargs):
 		rargs = dict(kwargs)
+		rargs["access_token"] = self.token
 		rargs["v"] = vk_api.__k_version
-		request_string = vk_api.__create_request_string("https://api.vk.com/method/{0}?access_token={1}".format(method, self.token), rargs)
+		request_string = vk_api.__create_request_string("https://api.vk.com/method/{0}?".format(method), rargs)
 
 		if self.debug:
 			key = vk_api.md5(request_string)
