@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import hashlib
-import json
+from jsonf_python import jsonf
 import os
 import time
 from argparse import Namespace as ndict
@@ -22,29 +22,27 @@ class vk_api(object):
 
 	def __load_hash(self):
 		self.__hash.clear()
-		if not os.path.isdir(self.__k_hash_path):
-			os.mkdir(self.__k_hash_path)
+		if not os.path.isdir(self.__k_hash_dir):
+			os.mkdir(self.__k_hash_dir)
 
-		for file_path_dir in os.listdir(self.__k_hash_path):
-			file_path = self.__k_hash_path + file_path_dir
+		for file_path_dir in os.listdir(self.__k_hash_dir):
+			file_path = self.__k_hash_dir + file_path_dir
 			key = os.path.splitext(os.path.basename(file_path))[0]
-			with open(file_path, "r") as file:
-				self.__hash[key] = json.loads(file.read())
+			self.__hash[key] = jsonf.load(file_path)
 
 	def __save_hash(self, s, request):
-		if not os.path.isdir(self.__k_hash_path):
-			os.mkdir(self.__k_hash_path)
+		if not os.path.isdir(self.__k_hash_dir):
+			os.mkdir(self.__k_hash_dir)
 
-		file_name = s + ".json"
-		with open(self.__k_hash_path + file_name, "w") as file:
-			file.write(json.dumps(request, sort_keys=True, indent=4, separators=(",", ": ")))
+		file_path = self.__k_hash_dir + s + ".json"
+		jsonf.save(request, file_path)
 
 	def clear_hash(self):
-		for file_path_dir in os.listdir(self.__k_hash_path):
-			file_path = self.__k_hash_path + file_path_dir
+		for file_path_dir in os.listdir(self.__k_hash_dir):
+			file_path = self.__k_hash_dir + file_path_dir
 			os.remove(file_path)
 
-		os.rmdir(self.__k_hash_path)
+		os.rmdir(self.__k_hash_dir)
 
 		self.__hash = {}
 
@@ -54,7 +52,7 @@ class vk_api(object):
 		self.__credentials_path = "credentials.json"
 		self.__sleep_sec = 0.25
 		self.__first_get = False
-		self.__k_hash_path = os.getcwd() + "\\vk_debug_hash\\"
+		self.__k_hash_dir = os.getcwd() + "/vk_debug_hash/"
 		self.__hash = {}
 
 		self.debug = True
