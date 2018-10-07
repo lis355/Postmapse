@@ -10,7 +10,6 @@ import requests
 
 
 class vk_api(object):
-	__k_version = 5.74
 	__k_count = 100
 	__k__token_path = "vk.token"
 	__k__sleep_sec = 0.25
@@ -59,7 +58,8 @@ class vk_api(object):
 
 		self.__hash = {}
 
-	def __init__(self):
+	def __init__(self, version):
+		self.version = version
 		self.__token = ""
 		self.__first_get = False
 		self.__k_hash_dir = os.getcwd() + "/vk_debug_hash/"
@@ -88,7 +88,6 @@ class vk_api(object):
 	@staticmethod
 	def request_token(params) -> str:
 		params["grant_type"] = "password"
-		params["v"] = vk_api.__k_version
 		request_string = vk_api.__create_request_string("https://oauth.vk.com/token?", params)
 
 		request = vk_api.__get_request(request_string)
@@ -127,7 +126,7 @@ class vk_api(object):
 	def get(self, method, **kwargs):
 		rargs = dict(kwargs)
 		rargs["access_token"] = self.token
-		rargs["v"] = vk_api.__k_version
+		rargs["v"] = self.version
 		request_string = vk_api.__create_request_string("https://api.vk.com/method/{0}?".format(method), rargs)
 
 		if self.debug:

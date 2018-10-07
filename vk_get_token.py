@@ -10,12 +10,14 @@ if __name__ == "__main__":
 	parser.add_argument("credentials", type=str)
 	parser.add_argument("username", type=str)
 	parser.add_argument("password", type=str)
+	parser.add_argument("v", type=str)
 	parser.add_argument("-out", type=str, default="vk.token")
 	line_args = parser.parse_args()
 
 	credentials = jsonf.load(line_args.credentials)
 	credentials["username"]= line_args.username
 	credentials["password"] = line_args.password
+	credentials["v"] = line_args.password
 
 	token = vk.vk_api.request_token(credentials)
 

@@ -15,8 +15,10 @@ To generate token you need "credentials.json" file:
 Then use vk_get_token to get "vk.token" file:
 
 ```javascript
-python postmapse/vk_get_token.py "credentials.json" "USERNAME" "PASSWORD"
+python postmapse/vk_get_token.py "credentials.json" "USERNAME" "PASSWORD" "VERSION"
 ```
+
+VK Api versions list avaliable at https://vk.com/dev/versions
 
 Example of use postmapse in your scripts:
 
@@ -27,7 +29,7 @@ Example of use postmapse in your scripts:
 from postmapse import vk
 from postmapse import vk_helper
 
-vk_provider = vk.vk_api()
+vk_provider = vk.vk_api(5.85)
 self_account_info = vk_helper.get_self_account_info(vk_provider)
 self_id = vk_helper.get_self_id(vk_provider)
 self_name = vk_helper.get_rus_name(self_account_info)
