@@ -17,7 +17,7 @@ if __name__ == "__main__":
 	credentials = jsonf.load(line_args.credentials)
 	credentials["username"]= line_args.username
 	credentials["password"] = line_args.password
-	credentials["v"] = line_args.password
+	credentials["v"] = line_args.v
 
 	token = vk.vk_api.request_token(credentials)
 
